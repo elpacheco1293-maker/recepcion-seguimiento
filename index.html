@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXOCORP · Reporte de Recepción de Mercadería</title>
+  <!-- Tailwind CSS para diseño responsivo y moderno -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js para visualizaciones interactivas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- SheetJS (XLSX) para importar/exportar archivos Excel y CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Fuente Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            nexo: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background:
+        radial-gradient(1100px 560px at 5% -5%, #c7d2fe 0%, transparent 60%),
+        radial-gradient(900px 520px at 100% 0%, #bae6fd 0%, transparent 55%),
+        #eef1fb;
+      color: #1d2433;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 18px 40px -20px rgba(49, 46, 129, 0.32), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    }
+    .brand-gradient {
+      background: linear-gradient(90deg, #3730a3, #6366f1 55%, #0ea5e9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    @media print {
+      body { background: #fff !important; }
+      .no-print { display: none !important; }
+      .glass-card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; background: #fff !important; }
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Contenedor principal -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- Encabezado Ejecutivo -->
+    <header class="glass-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <!-- Isotipo vectorial NEXOCORP -->
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-sky-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 shrink-0">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold tracking-[0.28em] uppercase brand-gradient">NEXOCORP</span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800" id="badge-mes">
+              Mes: NOVIEMBRE
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5">
+            Reporte de Recepción de Mercadería
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Control ejecutivo de SKUs, LPN enviadas vs. recibidas y estado logístico por proveedor
+          </p>
+        </div>
+      </div>
+
+      <!-- Acciones discretas superiores -->
+      <div class="flex flex-wrap items-center gap-2.5 no-print">
+        <label class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-white hover:bg-indigo-50 text-slate-700 border border-slate-200/90 shadow-sm transition">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          <span>Actualizar Excel / CSV</span>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" class="hidden">
+        </label>
+
+        <button type="button" onclick="restaurarDatos()" id="btn-reset" class="hidden inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Volver a los datos precargados de Noviembre">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Datos originales</span>
+        </button>
+
+        <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 shadow-sm transition">
+          <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          <span>Imprimir</span>
+        </button>
+
+        <button type="button" onclick="exportarExcel()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-md shadow-indigo-600/25 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>Exportar Excel</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Notificación dinámica (reemplaza alert()) -->
+    <div id="toast" class="hidden mb-5 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm"></div>
+
+    <!-- Tarjetas KPI Superiores -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <!-- KPI 1: Total SKU -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total SKU</span>
+          <span class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <p class="text-2xl sm:text-3xl font-bold text-slate-900" id="kpi-sku">0</p>
+          <span class="text-xs text-slate-500" id="kpi-registros">10 registros</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: LPN Enviadas -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">LPN Enviadas</span>
+          <span class="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <p class="text-2xl sm:text-3xl font-bold text-slate-900" id="kpi-enviadas">0</p>
+          <span class="text-xs text-slate-500">bultos totales</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: LPN Recibidas -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">LPN Recibidas</span>
+          <span class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <p class="text-2xl sm:text-3xl font-bold text-emerald-700" id="kpi-recibidas">0</p>
+          <span class="text-xs text-emerald-600 font-medium">ingresadas</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: LPN Pendientes / En Tránsito -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">LPN Pendientes</span>
+          <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <p class="text-2xl sm:text-3xl font-bold text-amber-600" id="kpi-pendientes">0</p>
+          <span class="text-xs text-amber-700 font-medium">en tránsito</span>
+        </div>
+      </div>
+
+      <!-- KPI 5: % Cumplimiento -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden sm:col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Cumplimiento</span>
+          <span class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div class="flex items-baseline justify-between">
+            <p class="text-2xl sm:text-3xl font-bold text-indigo-700" id="kpi-cumplimiento">0.00%</p>
+            <span class="text-xs text-slate-500">LPN Rec/Env</span>
+          </div>
+          <div class="w-full bg-slate-200/80 rounded-full h-2 mt-2 overflow-hidden">
+            <div id="kpi-bar" class="bg-gradient-to-r from-indigo-600 to-sky-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Barra de Filtros Interactivos -->
+    <section class="glass-card rounded-2xl p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+      <!-- Botones de filtro por Estado -->
+      <div class="flex flex-wrap items-center gap-2" id="filtros-estado">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-1">Estado:</span>
+        <button type="button" data-estado="TODOS" onclick="setEstado('TODOS')" class="estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 text-white shadow-sm transition">
+          Todos
+        </button>
+        <button type="button" data-estado="Verificado" onclick="setEstado('Verificado')" class="estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white text-slate-700 hover:bg-emerald-50 border border-slate-200 transition">
+          Verificado
+        </button>
+        <button type="button" data-estado="Recepción completa" onclick="setEstado('Recepción completa')" class="estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white text-slate-700 hover:bg-sky-50 border border-slate-200 transition">
+          Recepción completa
+        </button>
+        <button type="button" data-estado="En tránsito" onclick="setEstado('En tránsito')" class="estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white text-slate-700 hover:bg-amber-50 border border-slate-200 transition">
+          En tránsito
+        </button>
+      </div>
+
+      <!-- Buscador de Proveedor -->
+      <div class="relative w-full md:w-80">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          type="text"
+          id="buscar-proveedor"
+          oninput="aplicarFiltros()"
+          placeholder="Buscar proveedor..."
+          class="w-full pl-10 pr-8 py-2 rounded-xl text-sm bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition"
+        >
+        <button type="button" id="btn-clear-search" onclick="limpiarBusqueda()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold px-1.5 py-0.5">
+          ✕
+        </button>
+      </div>
+    </section>
+
+    <!-- Sección de Gráficos Interactivos -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+      <!-- Gráfico 1: Barras Apiladas por Proveedor (8 columnas en desktop) -->
+      <div class="glass-card rounded-2xl p-5 sm:p-6 lg:col-span-8 flex flex-col">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">LPN Enviadas vs. Recibidas por Proveedor</h2>
+            <p class="text-xs text-slate-500">Comparativa de bultos recibidos y pendientes sobre el total enviado</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-medium">
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-indigo-600 inline-block"></span>Recibidas</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span>Pendientes</span>
+          </div>
+        </div>
+        <div class="relative w-full h-72 sm:h-80">
+          <canvas id="chartProveedores"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico 2: Dona por Estado (4 columnas en desktop) -->
+      <div class="glass-card rounded-2xl p-5 sm:p-6 lg:col-span-4 flex flex-col">
+        <div class="flex items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Distribución por Estado</h2>
+            <p class="text-xs text-slate-500" id="subtitulo-dona">Proporción de LPN enviadas por estado</p>
+          </div>
+          <div class="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold" role="group">
+            <button type="button" id="btn-dona-lpn" onclick="setMetricaDona('lpn')" class="px-2.5 py-1 rounded-md bg-white text-indigo-700 shadow-sm transition">LPN</button>
+            <button type="button" id="btn-dona-sku" onclick="setMetricaDona('sku')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">SKU</button>
+          </div>
+        </div>
+        <div class="relative w-full h-60 sm:h-64 flex items-center justify-center">
+          <canvas id="chartEstados"></canvas>
+        </div>
+        <div id="leyenda-estados" class="mt-4 pt-3 border-t border-slate-200/70 space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- Tabla Ejecutiva Detallada -->
+    <section class="glass-card rounded-2xl overflow-hidden">
+      <div class="p-5 sm:p-6 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Detalle de Recepciones por Orden / Proveedor</h2>
+          <p class="text-xs text-slate-500" id="subtitulo-tabla">Mostrando 10 de 10 registros</p>
+        </div>
+        <span class="text-xs font-medium text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg self-start sm:self-auto">
+          Haz clic en cualquier encabezado para ordenar
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/90 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+              <th class="py-3.5 px-4 font-semibold cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('mes')">Mes ↕</th>
+              <th class="py-3.5 px-4 font-semibold cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('estado')">Estado ↕</th>
+              <th class="py-3.5 px-4 font-semibold cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('proveedor')">Proveedor ↕</th>
+              <th class="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('sku')">SKU Totales ↕</th>
+              <th class="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('enviadas')">LPN Enviadas ↕</th>
+              <th class="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('recibidas')">LPN Recibidas ↕</th>
+              <th class="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('pendientes')">LPN Pendientes ↕</th>
+              <th class="py-3.5 px-4 font-semibold w-44 cursor-pointer hover:text-indigo-700 select-none" onclick="ordenarPor('avance')">Avance Recepción ↕</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body" class="divide-y divide-slate-200/70 text-sm bg-white/70"></tbody>
+          <tfoot id="tabla-foot" class="bg-indigo-50/80 font-bold text-slate-900 text-sm border-t-2 border-indigo-200"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <footer class="mt-8 text-center text-xs text-slate-500 tracking-widest uppercase">
+      NEXOCORP · Inteligencia Logística &amp; Control de Recepción
+    </footer>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DATOS PRECARGADOS EXACTOS DE LA HOJA "RECEPCION" (MES: NOVIEMBRE)
+    // =========================================================================
+    const TRADUCCION_ESTADOS = {
+      'verified': 'Verificado',
+      'verificado': 'Verificado',
+      'in transit': 'En tránsito',
+      'en transito': 'En tránsito',
+      'en tránsito': 'En tránsito',
+      'receiving complete': 'Recepción completa',
+      'recepcion completa': 'Recepción completa',
+      'recepción completa': 'Recepción completa'
+    };
+
+    function traducirEstado(valor) {
+      const limpio = String(valor ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+      if (!limpio) return 'Sin estado';
+      if (TRADUCCION_ESTADOS[limpio]) return TRADUCCION_ESTADOS[limpio];
+      // Capitaliza la primera letra si llega otro estado no mapeado
+      return limpio.charAt(0).toUpperCase() + limpio.slice(1);
+    }
+
+    const DATOS_ORIGINALES = [
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Verified'), proveedor: 'MEGALABS BOLIVIA S.R.L.', sku: 159, recibidas: 178, enviadas: 178 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Receiving Complete'), proveedor: 'MEGALABS BOLIVIA S.R.L.', sku: 2, recibidas: 2, enviadas: 2 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Verified'), proveedor: 'MEGALABS BOLIVIA S.R.L.', sku: 16, recibidas: 20, enviadas: 20 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('In Transit'), proveedor: 'PHARMATECH BOLIVIANA SA.', sku: 52, recibidas: 0, enviadas: 55 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Verified'), proveedor: 'ELITE BRANDS S.R.L.', sku: 199, recibidas: 204, enviadas: 204 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('In Transit'), proveedor: 'INDUSTRIA QUIMICO FARMACEUTICA SIGMA CORP S.R.L.', sku: 21, recibidas: 0, enviadas: 21 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Verified'), proveedor: 'NIPRO MEDICAL CORPORATION-SUCURSAL BOLIVIA', sku: 1, recibidas: 1, enviadas: 1 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('In Transit'), proveedor: 'REMBERTO RODRIGUEZ DAVIEDS', sku: 6, recibidas: 0, enviadas: 6 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('In Transit'), proveedor: 'INDUSTRIA QUIMICO FARMACEUTICA SIGMA CORP S.R.L.', sku: 2, recibidas: 0, enviadas: 2 },
+      { mes: 'NOVIEMBRE', estado: traducirEstado('Receiving Complete'), proveedor: 'LABORATORIOS EUROFARMA BOLIVIA S.A.', sku: 2, recibidas: 2, enviadas: 2 }
+    ];
+
+    // Estado reactivo de la aplicación
+    let datosBase = structuredClone(DATOS_ORIGINALES);
+    let estadoFiltro = 'TODOS';
+    let metricaDona = 'lpn';
+    let ordenActual = { campo: null, asc: true };
+    let chartProveedores = null;
+    let chartEstados = null;
+
+    // Utilidades de formato y seguridad HTML
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const fmtNum = n => Number(n || 0).toLocaleString('es-BO');
+
+    function mostrarToast(mensaje, tipo = 'info') {
+      const el = document.getElementById('toast');
+      const estilos = {
+        ok: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+        err: 'bg-rose-50 text-rose-800 border border-rose-200',
+        info: 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+      };
+      el.className = `mb-5 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm ${estilos[tipo] || estilos.info}`;
+      el.innerHTML = `<span>${esc(mensaje)}</span><button type="button" onclick="this.parentElement.classList.add('hidden')" class="ml-4 font-bold opacity-70 hover:opacity-100">✕</button>`;
+      el.classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // 2. FILTRADO, ORDENAMIENTO Y CÁLCULO DE MÉTRICAS
+    // =========================================================================
+    function obtenerFiltrados() {
+      const q = document.getElementById('buscar-proveedor').value.trim().toUpperCase();
+      document.getElementById('btn-clear-search').classList.toggle('hidden', !q);
+
+      let lista = datosBase
+        .map(r => {
+          const pendientes = Math.max(0, r.enviadas - r.recibidas);
+          const avance = r.enviadas > 0 ? (r.recibidas / r.enviadas) * 100 : 0;
+          return { ...r, pendientes, avance };
+        })
+        .filter(r => {
+          const pasaEstado = estadoFiltro === 'TODOS' || r.estado.toLowerCase() === estadoFiltro.toLowerCase();
+          const pasaTexto = !q || r.proveedor.toUpperCase().includes(q) || r.mes.toUpperCase().includes(q);
+          return pasaEstado && pasaTexto;
+        });
+
+      if (ordenActual.campo) {
+        const { campo, asc } = ordenActual;
+        lista.sort((a, b) => {
+          const va = a[campo], vb = b[campo];
+          if (typeof va === 'number' && typeof vb === 'number') return asc ? va - vb : vb - va;
+          return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+        });
+      }
+      return lista;
+    }
+
+    function setEstado(nuevoEstado) {
+      estadoFiltro = nuevoEstado;
+      document.querySelectorAll('.estado-btn').forEach(btn => {
+        const activo = btn.dataset.estado === nuevoEstado;
+        if (activo) {
+          btn.className = 'estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 text-white shadow-sm transition';
+        } else {
+          btn.className = 'estado-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white text-slate-700 hover:bg-indigo-50 border border-slate-200 transition';
+        }
+      });
+      aplicarFiltros();
+    }
+
+    function setMetricaDona(metrica) {
+      metricaDona = metrica;
+      const btnLpn = document.getElementById('btn-dona-lpn');
+      const btnSku = document.getElementById('btn-dona-sku');
+      if (metrica === 'sku') {
+        btnSku.className = 'px-2.5 py-1 rounded-md bg-white text-indigo-700 shadow-sm transition';
+        btnLpn.className = 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition';
+        document.getElementById('subtitulo-dona').textContent = 'Proporción de SKU totales por estado';
+      } else {
+        btnLpn.className = 'px-2.5 py-1 rounded-md bg-white text-indigo-700 shadow-sm transition';
+        btnSku.className = 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition';
+        document.getElementById('subtitulo-dona').textContent = 'Proporción de LPN enviadas por estado';
+      }
+      renderGraficos(obtenerFiltrados());
+    }
+
+    function ordenarPor(campo) {
+      if (ordenActual.campo === campo) {
+        ordenActual.asc = !ordenActual.asc;
+      } else {
+        ordenActual = { campo, asc: true };
+      }
+      aplicarFiltros();
+    }
+
+    // =========================================================================
+    // 3. RENDERIZADO DE KPIs, TABLA Y GRÁFICOS
+    // =========================================================================
+    function aplicarFiltros() {
+      const filas = obtenerFiltrados();
+
+      // Totales dinámicos
+      const totSku = filas.reduce((s, r) => s + r.sku, 0);
+      const totEnv = filas.reduce((s, r) => s + r.enviadas, 0);
+      const totRec = filas.reduce((s, r) => s + r.recibidas, 0);
+      const totPen = filas.reduce((s, r) => s + r.pendientes, 0);
+      const cumplimiento = totEnv > 0 ? (totRec / totEnv) * 100 : 0;
+
+      // Actualizar KPIs
+      document.getElementById('kpi-sku').textContent = fmtNum(totSku);
+      document.getElementById('kpi-registros').textContent = `${filas.length} registro${filas.length === 1 ? '' : 's'}`;
+      document.getElementById('kpi-enviadas').textContent = fmtNum(totEnv);
+      document.getElementById('kpi-recibidas').textContent = fmtNum(totRec);
+      document.getElementById('kpi-pendientes').textContent = fmtNum(totPen);
+      document.getElementById('kpi-cumplimiento').textContent = `${cumplimiento.toFixed(2)}%`;
+      document.getElementById('kpi-bar').style.width = `${Math.min(100, cumplimiento).toFixed(1)}%`;
+
+      // Actualizar badge de mes si se cargó otro archivo
+      const meses = [...new Set(datosBase.map(d => d.mes).filter(Boolean))];
+      document.getElementById('badge-mes').textContent = `Mes: ${meses.join(', ') || 'N/D'}`;
+
+      // Actualizar Tabla
+      renderTabla(filas, { totSku, totEnv, totRec, totPen, cumplimiento });
+
+      // Actualizar Gráficos
+      renderGraficos(filas);
+    }
+
+    function badgeEstado(estado) {
+      const e = traducirEstado(estado);
+      if (e === 'Verificado') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200/80">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>Verificado
+        </span>`;
+      }
+      if (e === 'Recepción completa') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200/80">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-600"></span>Recepción completa
+        </span>`;
+      }
+      if (e === 'En tránsito') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200/80">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>En tránsito
+        </span>`;
+      }
+      return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">${esc(e)}</span>`;
+    }
+
+    function renderTabla(filas, totales) {
+      const tbody = document.getElementById('tabla-body');
+      const tfoot = document.getElementById('tabla-foot');
+      document.getElementById('subtitulo-tabla').textContent = `Mostrando ${filas.length} de ${datosBase.length} registros`;
+
+      if (!filas.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-slate-500">No se encontraron registros con los filtros aplicados.</td></tr>`;
+        tfoot.innerHTML = '';
+        return;
+      }
+
+      tbody.innerHTML = filas.map(r => {
+        const pct = Math.min(100, Math.max(0, r.avance));
+        const barColor = pct === 100 ? 'bg-emerald-500' : (pct > 0 ? 'bg-indigo-600' : 'bg-amber-400');
+        return `
+          <tr class="hover:bg-indigo-50/50 transition-colors">
+            <td class="py-3.5 px-4 text-xs font-medium text-slate-500 whitespace-nowrap">${esc(r.mes)}</td>
+            <td class="py-3.5 px-4 whitespace-nowrap">${badgeEstado(r.estado)}</td>
+            <td class="py-3.5 px-4 font-medium text-slate-800">${esc(r.proveedor)}</td>
+            <td class="py-3.5 px-4 text-right tabular-nums text-slate-700">${fmtNum(r.sku)}</td>
+            <td class="py-3.5 px-4 text-right tabular-nums text-slate-700">${fmtNum(r.enviadas)}</td>
+            <td class="py-3.5 px-4 text-right tabular-nums font-semibold text-emerald-700">${fmtNum(r.recibidas)}</td>
+            <td class="py-3.5 px-4 text-right tabular-nums font-semibold ${r.pendientes > 0 ? 'text-amber-600' : 'text-slate-400'}">${fmtNum(r.pendientes)}</td>
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-2.5">
+                <div class="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden">
+                  <div class="${barColor} h-2 rounded-full" style="width: ${pct.toFixed(0)}%"></div>
+                </div>
+                <span class="text-xs font-semibold tabular-nums text-slate-700 w-11 text-right">${pct.toFixed(0)}%</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tfoot.innerHTML = `
+        <tr>
+          <td colspan="3" class="py-3.5 px-4 uppercase text-xs tracking-wider text-indigo-900">Total General (Vista Actual)</td>
+          <td class="py-3.5 px-4 text-right tabular-nums">${fmtNum(totales.totSku)}</td>
+          <td class="py-3.5 px-4 text-right tabular-nums">${fmtNum(totales.totEnv)}</td>
+          <td class="py-3.5 px-4 text-right tabular-nums text-emerald-700">${fmtNum(totales.totRec)}</td>
+          <td class="py-3.5 px-4 text-right tabular-nums text-amber-700">${fmtNum(totales.totPen)}</td>
+          <td class="py-3.5 px-4 text-right tabular-nums text-indigo-800">${totales.cumplimiento.toFixed(2)}%</td>
+        </tr>
+      `;
+    }
+
+    function acortarProveedor(nombre) {
+      return nombre
+        .replace(/INDUSTRIA QUIMICO FARMACEUTICA /i, '')
+        .replace(/CORPORATION-SUCURSAL BOLIVIA/i, '')
+        .replace(/BOLIVIA S\.R\.L\.|BOLIVIA S\.A\.|BOLIVIANA SA\.|S\.R\.L\.|S\.A\./gi, '')
+        .trim();
+    }
+
+    function renderGraficos(filas) {
+      // --- Agrupación por Proveedor para Gráfico 1 ---
+      const porProv = {};
+      filas.forEach(r => {
+        if (!porProv[r.proveedor]) {
+          porProv[r.proveedor] = { nombre: r.proveedor, corto: acortarProveedor(r.proveedor), recibidas: 0, pendientes: 0, enviadas: 0 };
+        }
+        porProv[r.proveedor].recibidas += r.recibidas;
+        porProv[r.proveedor].pendientes += r.pendientes;
+        porProv[r.proveedor].enviadas += r.enviadas;
+      });
+      const listaProv = Object.values(porProv).sort((a, b) => b.enviadas - a.enviadas);
+
+      const ctx1 = document.getElementById('chartProveedores').getContext('2d');
+      if (chartProveedores) chartProveedores.destroy();
+
+      chartProveedores = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: listaProv.map(p => p.corto),
+          datasets: [
+            {
+              label: 'LPN Recibidas',
+              data: listaProv.map(p => p.recibidas),
+              backgroundColor: '#4f46e5',
+              borderRadius: 6,
+              barPercentage: 0.65
+            },
+            {
+              label: 'LPN Pendientes',
+              data: listaProv.map(p => p.pendientes),
+              backgroundColor: '#fbbf24',
+              borderRadius: 6,
+              barPercentage: 0.65
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1e1b4b',
+              padding: 12,
+              cornerRadius: 10,
+              callbacks: {
+                title: items => listaProv[items[0].dataIndex]?.nombre || '',
+                afterBody: items => {
+                  const p = listaProv[items[0].dataIndex];
+                  return p ? `Total Enviadas: ${fmtNum(p.enviadas)} LPN` : '';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { color: 'rgba(148, 163, 184, 0.18)' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+            },
+            y: {
+              stacked: true,
+              grid: { display: false },
+              ticks: { font: { family: 'Inter', size: 11, weight: '500' }, color: '#334155' }
+            }
+          }
+        }
+      });
+
+      // --- Agrupación por Estado para Gráfico 2 ---
+      const ordenEstados = ['Verificado', 'Recepción completa', 'En tránsito'];
+      const coloresEstado = {
+        'Verificado': '#10b981',
+        'Recepción completa': '#0ea5e9',
+        'En tránsito': '#f59e0b'
+      };
+      const sumEstados = { 'Verificado': 0, 'Recepción completa': 0, 'En tránsito': 0 };
+      filas.forEach(r => {
+        const est = traducirEstado(r.estado);
+        if (sumEstados[est] === undefined) sumEstados[est] = 0;
+        sumEstados[est] += metricaDona === 'sku' ? r.sku : r.enviadas;
+      });
+
+      const estadosPresentes = Object.keys(sumEstados).filter(k => sumEstados[k] > 0 || ordenEstados.includes(k));
+      const totalMetricaEstado = estadosPresentes.reduce((a, k) => a + sumEstados[k], 0);
+      const unidadMetrica = metricaDona === 'sku' ? 'SKU' : 'LPN';
+
+      const ctx2 = document.getElementById('chartEstados').getContext('2d');
+      if (chartEstados) chartEstados.destroy();
+
+      chartEstados = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: estadosPresentes,
+          datasets: [{
+            data: estadosPresentes.map(k => sumEstados[k]),
+            backgroundColor: estadosPresentes.map(k => coloresEstado[k] || '#6366f1'),
+            borderWidth: 3,
+            borderColor: '#ffffff',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '66%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1e1b4b',
+              padding: 10,
+              cornerRadius: 10,
+              callbacks: {
+                label: ctx => {
+                  const val = ctx.parsed;
+                  const pct = totalMetricaEstado > 0 ? ((val / totalMetricaEstado) * 100).toFixed(1) : '0.0';
+                  return ` ${ctx.label}: ${fmtNum(val)} ${unidadMetrica} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Leyenda detallada debajo de la dona
+      document.getElementById('leyenda-estados').innerHTML = estadosPresentes.map(k => {
+        const val = sumEstados[k];
+        const pct = totalMetricaEstado > 0 ? ((val / totalMetricaEstado) * 100).toFixed(1) : '0.0';
+        const color = coloresEstado[k] || '#6366f1';
+        return `
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-2 text-slate-700 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
+              ${esc(k)}
+            </span>
+            <span class="tabular-nums text-slate-600 font-semibold">${fmtNum(val)} ${unidadMetrica} <span class="text-slate-400 font-normal">(${pct}%)</span></span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 4. IMPORTAR EXCEL / CSV Y EXPORTAR REPORTE
+    // =========================================================================
+    document.getElementById('file-input').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: 'array' });
+        // Busca la hoja "Datos" si existe, si no usa la primera hoja
+        const sheetName = wb.SheetNames.includes('Datos') ? 'Datos' : wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+
+        const nuevos = rows
+          .map(r => {
+            // Mapeo flexible de encabezados del Google Sheet
+            const keys = Object.keys(r);
+            const getCol = patrones => {
+              const k = keys.find(key => patrones.some(p => key.toLowerCase().includes(p)));
+              return k ? r[k] : '';
+            };
+            const mes = String(getCol(['mes']) || 'NOVIEMBRE').trim();
+            const estado = traducirEstado(getCol(['estado']));
+            const proveedor = String(getCol(['proveedor']) || '').trim();
+            const sku = Number(getCol(['sku'])) || 0;
+            const recibidas = Number(getCol(['recibida'])) || 0;
+            const enviadas = Number(getCol(['enviada'])) || 0;
+            return { mes, estado, proveedor, sku, recibidas, enviadas };
+          })
+          .filter(r => r.proveedor && (r.sku > 0 || r.enviadas > 0 || r.recibidas > 0));
+
+        if (!nuevos.length) {
+          mostrarToast('No se encontraron filas válidas con las columnas esperadas (MES, ESTADO, PROVEEDOR, SKU, LPN).', 'err');
+          return;
+        }
+
+        datosBase = nuevos;
+        document.getElementById('btn-reset').classList.remove('hidden');
+        setEstado('TODOS');
+        mostrarToast(`Archivo "${file.name}" cargado correctamente (${nuevos.length} registros).`, 'ok');
+      } catch (err) {
+        mostrarToast('Error al leer el archivo: ' + (err.message || err), 'err');
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    function restaurarDatos() {
+      datosBase = structuredClone(DATOS_ORIGINALES);
+      document.getElementById('btn-reset').classList.add('hidden');
+      document.getElementById('buscar-proveedor').value = '';
+      ordenActual = { campo: null, asc: true };
+      setEstado('TODOS');
+      mostrarToast('Se restauraron los datos originales de NOVIEMBRE.', 'info');
+    }
+
+    function exportarExcel() {
+      const filas = obtenerFiltrados();
+      if (!filas.length) {
+        mostrarToast('No hay datos en la vista actual para exportar.', 'err');
+        return;
+      }
+      const dataExport = filas.map(r => ({
+        'MES': r.mes,
+        'ESTADO': r.estado,
+        'NOMBRE DE PROVEEDOR': r.proveedor,
+        'SKU TOTALES': r.sku,
+        'LPN ENVIADAS': r.enviadas,
+        'LPN RECIBIDAS': r.recibidas,
+        'LPN PENDIENTES': r.pendientes,
+        '% CUMPLIMIENTO': Number(r.avance.toFixed(2))
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(dataExport);
+      XLSX.utils.book_append_sheet(wb, ws, 'Reporte_Recepcion');
+      XLSX.writeFile(wb, `NEXOCORP_Reporte_Recepcion_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      mostrarToast('Reporte exportado a Excel correctamente.', 'ok');
+    }
+
+    // Inicializar reporte al cargar
+    window.addEventListener('DOMContentLoaded', aplicarFiltros);
+  </script>
+</body>
+</html>
